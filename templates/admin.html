@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Admin Dashboard</title>
+</head>
+<body class="bg-gray-50 p-10">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between mb-8">
+            <h1 class="text-2xl font-bold">Admin Panel</h1>
+            <p>Prijavljen: {{ user.email }}</p>
+        </div>
+        <table class="w-full bg-white rounded shadow">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-4 text-left">Originalni URL</th>
+                    <th class="p-4 text-left">Kod</th>
+                    <th class="p-4 text-center">Akcije</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for link in links %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">
+                        <form action="/edit/{{ link.id }}" method="POST" class="flex gap-2">
+                            <input type="url" name="new_url" value="{{ link.original_url }}" 
+                                class="border rounded px-2 py-1 w-full text-sm focus:outline-blue-500">
+                            <button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600">
+                                Spremi
+                            </button>
+                        </form>
+                    </td>
+                    <td class="p-4 font-mono text-sm text-gray-600">{{ link.short_id }}</td>
+                    <td class="p-4 text-center">
+                        <form action="/delete/{{ link.id }}" method="POST" onsubmit="return confirm('Sigurno želiš obrisati?')">
+                            <button class="text-red-600 hover:underline text-sm font-medium">Obriši</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
