@@ -71,7 +71,6 @@ async def shorten_url(
             {"request": request, "user": user, "error": error_msg}
         )
 
-    # 2. Spremanje u bazu
     try:
         db_url = models.URL(short_id=short_id, original_url=url)
         db.add(db_url)
