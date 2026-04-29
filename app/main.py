@@ -1,6 +1,6 @@
 import os
 import uuid
-import re  # Za validaciju znakova
+import re
 from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -9,6 +9,7 @@ from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.orm import Session
 from . import models
 
+# Inicijalizacija baze
 models.init_db()
 
 app = FastAPI(docs_url=None, redoc_url=None)
@@ -19,13 +20,57 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 templates = Jinja2Templates(directory="templates")
 
-#URLovi
+# OAuth Setup
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
+# Rezervirane riječi
 FORBIDDEN_IDS = {"admin", "login", "logout", "dashboard", "oauth", "shorten", "static"}
 
 def get_db():
     db = models.SessionLocal()
     try: yield db
     finally: db.close()
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    user = request.session.get('user')
+    if user:
+        return templates.TemplateResponse("index.html", {"request": request, "user": user})
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/login")
+async def login(request: Request):
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.get("/oauth/callback")
+async def auth_callback(request: Request):
+    token = await oauth.google.authorize_access_token(request)
+    user = token.get('userinfo')
+    if user:
+        request.session['user'] = dict(user)
+    return RedirectResponse(url='/')
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url='/')
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin(request: Request, db: Session = Depends(get_db)):
+    user = request.session.get('user')
+    if not user or user.get('email') != "tadija75@gmail.com":
+        raise HTTPException(status_code=403, detail="Pristup odbijen")
+    
+    links = db.query(models.URL).all()
+    return templates.TemplateResponse("admin.html", {"request": request, "links": links, "user": user})
 
 
 @app.post("/shorten")
@@ -44,16 +89,10 @@ async def shorten_url(
 
     if custom_id and custom_id.strip():
         proposed_id = custom_id.strip().lower()
-
-        # Da se ne stavi čć i slicno, pa ako radi problema maknuti
         if not re.match(r"^[a-z0-9\-_]+$", proposed_id):
             error_msg = "URL smije sadržavati samo slova, brojke i crtice."
-        
-        # Provjera rezerviranih riječi
         elif proposed_id in FORBIDDEN_IDS:
             error_msg = "Ovaj naziv je rezerviran za sustav."
-        
-        # Gledanje uniq
         else:
             existing = db.query(models.URL).filter(models.URL.short_id == proposed_id).first()
             if existing:
@@ -61,10 +100,8 @@ async def shorten_url(
             else:
                 short_id = proposed_id
     else:
-        # Ako nema custom_id, generiraj nasumični
         short_id = str(uuid.uuid4())[:6]
 
-    # Error return 
     if error_msg:
         return templates.TemplateResponse(
             "index.html", 
@@ -79,7 +116,7 @@ async def shorten_url(
         db.rollback()
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "user": user, "error": "Došlo je do pogreške pri spremanju."}
+            {"request": request, "user": user, "error": "Pogreška pri spremanju."}
         )
     
     return templates.TemplateResponse(
