@@ -38,14 +38,37 @@
                 Skrati
             </button>
         </form>
-
-        {% if short_url %}
-        <div class="mt-6 p-4 bg-green-100 rounded text-center border border-green-200">
-            <p class="text-sm text-green-800">Tvoj skraćeni link:</p>
-            <a href="{{ short_url }}" target="_blank" class="font-bold text-blue-600 break-all hover:underline">
-                {{ short_url }}
-            </a>
+{% if short_url %}
+        <div class="mt-6 p-4 bg-green-100 rounded border border-green-200">
+            <p class="text-sm text-green-800 text-center mb-2">Tvoj skraćeni link:</p>
+            <div class="flex items-center gap-2">
+                <input type="text" readonly value="{{ short_url }}" id="shortUrlInput"
+                       class="w-full bg-white p-2 text-sm border rounded text-blue-600 font-bold outline-none">
+                
+                <button onclick="copyToClipboard()" id="copyBtn"
+                        class="bg-blue-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-blue-700 transition shrink-0">
+                    Kopiraj
+                </button>
+            </div>
         </div>
+
+        <script>
+            function copyToClipboard() {
+                const copyText = document.getElementById("shortUrlInput");
+                const btn = document.getElementById("copyBtn");
+
+                navigator.clipboard.writeText(copyText.value).then(() => {
+                    const originalText = btn.innerText;
+                    btn.innerText = "Kopirano!";
+                    btn.classList.replace("bg-blue-600", "bg-green-600");
+
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.classList.replace("bg-green-600", "bg-blue-600");
+                    }, 2000);
+                });
+            }
+        </script>
         {% endif %}
     </div>
 </body>
