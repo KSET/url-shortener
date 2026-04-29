@@ -109,7 +109,7 @@ async def shorten_url(
 
     if error_msg:
         return templates.TemplateResponse(
-            request=request, name="index.html", context={"user": user, "error": error_msg}
+            request=request, name="index.html", context={"user": user, "error": error_msg,"url":url}
         )
 
     try:

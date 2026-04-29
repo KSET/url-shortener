@@ -20,8 +20,10 @@
         <form action="/shorten" method="POST" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Dugi URL</label>
-                <input type="url" name="url" placeholder="https://neka-jako-duga-adresa.com/..." required 
-                       class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="url" name="url" 
+                    value="{{ url if url else '' }}" 
+                    placeholder="https://neka-jako-duga-adresa.com/..." required 
+                    class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
 
             <div>
@@ -29,7 +31,7 @@
                 <div class="flex items-center border rounded focus-within:ring-2 focus-within:ring-blue-500">
                     <span class="bg-gray-100 p-3 text-gray-500 border-r text-sm">skrati.kset.org/</span>
                     <input type="text" name="custom_id" placeholder="moj-link" 
-                           class="w-full p-3 outline-none rounded-r text-sm">
+                        class="w-full p-3 outline-none rounded-r text-sm">
                 </div>
                 <p class="text-[10px] text-gray-400 mt-1">Dopuštena slova, brojke i crtice.</p>
             </div>
