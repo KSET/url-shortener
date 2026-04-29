@@ -30,7 +30,6 @@ oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
-# Rezervirane riječi
 FORBIDDEN_IDS = {"admin", "login", "logout", "dashboard", "oauth", "shorten", "static"}
 
 def get_db():
@@ -42,8 +41,13 @@ def get_db():
 async def home(request: Request):
     user = request.session.get('user')
     if user:
-        return templates.TemplateResponse("index.html", {"request": request, "user": user})
-    return templates.TemplateResponse("login.html", {"request": request})
+        # Prvi argument mora biti request, ime templatea ide pod 'name'
+        return templates.TemplateResponse(
+            request=request, name="index.html", context={"user": user}
+        )
+    return templates.TemplateResponse(
+        request=request, name="login.html", context={}
+    )
 
 @app.get("/login")
 async def login(request: Request):
@@ -70,8 +74,9 @@ async def admin(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Pristup odbijen")
     
     links = db.query(models.URL).all()
-    return templates.TemplateResponse("admin.html", {"request": request, "links": links, "user": user})
-
+    return templates.TemplateResponse(
+        request=request, name="admin.html", context={"links": links, "user": user}
+    )
 
 @app.post("/shorten")
 async def shorten_url(
@@ -104,8 +109,7 @@ async def shorten_url(
 
     if error_msg:
         return templates.TemplateResponse(
-            "index.html", 
-            {"request": request, "user": user, "error": error_msg}
+            request=request, name="index.html", context={"user": user, "error": error_msg}
         )
 
     try:
@@ -115,14 +119,13 @@ async def shorten_url(
     except Exception as e:
         db.rollback()
         return templates.TemplateResponse(
-            "index.html", 
-            {"request": request, "user": user, "error": "Pogreška pri spremanju."}
+            request=request, name="index.html", context={"user": user, "error": "Pogreška pri spremanju."}
         )
     
     return templates.TemplateResponse(
-        "index.html", 
-        {
-            "request": request, 
+        request=request, 
+        name="index.html", 
+        context={
             "user": user, 
             "short_url": f"https://skrati.kset.org/{short_id}"
         }
