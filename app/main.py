@@ -1,5 +1,6 @@
 import os
 import uuid
+import re  # Za validaciju znakova
 from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -14,95 +15,86 @@ app = FastAPI(docs_url=None, redoc_url=None)
 
 # Middleware
 SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY must be set in .env file!")
-
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=SECRET_KEY,
-    same_site="lax",
-    https_only=True
-)
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 templates = Jinja2Templates(directory="templates")
 
-# OAuth
-oauth = OAuth()
-oauth.register(
-    name='google',
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
+#URLovi
+FORBIDDEN_IDS = {"admin", "login", "logout", "dashboard", "oauth", "shorten", "static"}
 
 def get_db():
     db = models.SessionLocal()
     try: yield db
     finally: db.close()
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    if request.session.get('user'):
-        return RedirectResponse(url='/dashboard')
-    return templates.TemplateResponse(request=request, name="login.html")
-
-@app.get("/login")
-async def login(request: Request):
-    if request.session.get('user'):
-        return RedirectResponse(url='/dashboard')
-    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
-    return await oauth.google.authorize_redirect(request, redirect_uri)
-
-@app.get("/oauth/callback")
-async def auth_callback(request: Request):
-    token = await oauth.google.authorize_access_token(request)
-    user = token.get('userinfo')
-    if user:
-        request.session['user'] = dict(user)
-    return RedirectResponse(url='/dashboard')
-
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    user = request.session.get('user')
-    if not user:
-        return RedirectResponse(url='/')
-    return templates.TemplateResponse(request=request, name="index.html", context={"user": user})
 
 @app.post("/shorten")
-async def shorten_url(request: Request, url: str = Form(...), db: Session = Depends(get_db)):
+async def shorten_url(
+    request: Request, 
+    url: str = Form(...), 
+    custom_id: str = Form(None), 
+    db: Session = Depends(get_db)
+):
     user = request.session.get('user')
     if not user:
-        raise HTTPException(status_code=401)
+        return RedirectResponse(url="/", status_code=303)
     
-    short_id = str(uuid.uuid4())[:6]
-    db_url = models.URL(short_id=short_id, original_url=url)
-    db.add(db_url)
-    db.commit()
+    short_id = ""
+    error_msg = None
+
+    if custom_id and custom_id.strip():
+        proposed_id = custom_id.strip().lower()
+
+        # Da se ne stavi čć i slicno, pa ako radi problema maknuti
+        if not re.match(r"^[a-z0-9\-_]+$", proposed_id):
+            error_msg = "URL smije sadržavati samo slova, brojke i crtice."
+        
+        # Provjera rezerviranih riječi
+        elif proposed_id in FORBIDDEN_IDS:
+            error_msg = "Ovaj naziv je rezerviran za sustav."
+        
+        # Gledanje uniq
+        else:
+            existing = db.query(models.URL).filter(models.URL.short_id == proposed_id).first()
+            if existing:
+                error_msg = "Ovaj prilagođeni URL je već zauzet!"
+            else:
+                short_id = proposed_id
+    else:
+        # Ako nema custom_id, generiraj nasumični
+        short_id = str(uuid.uuid4())[:6]
+
+    # Error return 
+    if error_msg:
+        return templates.TemplateResponse(
+            "index.html", 
+            {"request": request, "user": user, "error": error_msg}
+        )
+
+    # 2. Spremanje u bazu
+    try:
+        db_url = models.URL(short_id=short_id, original_url=url)
+        db.add(db_url)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return templates.TemplateResponse(
+            "index.html", 
+            {"request": request, "user": user, "error": "Došlo je do pogreške pri spremanju."}
+        )
     
     return templates.TemplateResponse(
-        request=request, 
-        name="index.html", 
-        context={"short_url": f"https://skrati.kset.org/{short_id}", "user": user}
+        "index.html", 
+        {
+            "request": request, 
+            "user": user, 
+            "short_url": f"https://skrati.kset.org/{short_id}"
+        }
     )
-
-@app.get("/admin", response_class=HTMLResponse)
-async def admin(request: Request, db: Session = Depends(get_db)):
-    user = request.session.get('user')
-    if not user or user.get('email') != "tadija75@gmail.com":
-        return RedirectResponse(url='/')
-    
-    links = db.query(models.URL).all()
-    return templates.TemplateResponse(request=request, name="admin.html", context={"links": links, "user": user})
-
-@app.get("/logout")
-async def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse(url='/')
 
 @app.get("/{short_id}")
 async def redirect_url(short_id: str, db: Session = Depends(get_db)):
     link = db.query(models.URL).filter(models.URL.short_id == short_id).first()
     if link:
         return RedirectResponse(url=link.original_url)
-    raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404, detail="Link nije pronađen.")
