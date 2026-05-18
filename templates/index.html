@@ -4,13 +4,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Skrati.me - Dashboard</title>
 </head>
-<<<<<<< Updated upstream
-<body class="bg-slate-100 flex items-center justify-center h-screen">
-    <div class="bg-white p-10 rounded-xl shadow-lg w-full max-w-md">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-blue-600">Skrati URL</h1>
-            <a href="/logout" class="text-xs text-red-500 hover:underline">Odjava ({{ user.email }})</a>
-=======
 <body class="bg-slate-100 min-h-screen flex items-center justify-center p-6">
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg">
         <div class="flex items-start justify-between gap-4 mb-6">
@@ -23,32 +16,6 @@
                 <a href="/logout" class="text-slate-500 hover:text-slate-800">Odjava</a>
             </div>
         </div>
-        <form action="/shorten" method="POST" class="space-y-4">
-            <input type="url" name="url" placeholder="Zalijepi link ovdje..." required class="w-full p-3 border rounded">
-            <div>
-                <label for="qr_template" class="block text-sm font-medium text-slate-700 mb-2">QR template</label>
-                <select id="qr_template" name="qr_template" class="w-full p-3 border rounded bg-white">
-                    {% for template_key, template in qr_templates.items() %}
-                    <option value="{{ template_key }}" {% if selected_template == template_key %}selected{% endif %}>
-                        {{ template.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">Skrati</button>
-        </form>
-        {% if short_url %}
-        <div class="mt-6 p-4 bg-green-100 rounded text-center">
-            <p class="text-sm">Tvoj link:</p>
-            <a href="{{ short_url }}" class="font-bold text-blue-600 break-all">{{ short_url }}</a>
-            {% if qr_code_path %}
-            <div class="mt-4 flex flex-col items-center gap-3">
-                <img src="{{ qr_code_path }}" alt="QR kod za {{ short_url }}" class="w-56 h-56 rounded bg-white p-2 shadow-sm">
-                <a href="{{ qr_code_path }}" download class="text-sm font-medium text-blue-600 hover:underline">Preuzmi QR kod</a>
-            </div>
-            {% endif %}
->>>>>>> Stashed changes
-        </div>
 
         {% if error %}
         <div class="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 text-sm">
@@ -59,38 +26,56 @@
         <form action="/shorten" method="POST" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Dugi URL</label>
-                <input type="url" name="url" 
-                    value="{{ url if url else '' }}" 
-                    placeholder="https://neka-jako-duga-adresa.com/..." required 
+                <input type="url" name="url"
+                    value="{{ url if url else '' }}"
+                    placeholder="https://neka-jako-duga-adresa.com/..." required
                     class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Prilagođeni završetak (opcionalno)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prilagodeni zavrsetak (opcionalno)</label>
                 <div class="flex items-center border rounded focus-within:ring-2 focus-within:ring-blue-500">
                     <span class="bg-gray-100 p-3 text-gray-500 border-r text-sm">skrati.kset.org/</span>
-                    <input type="text" name="custom_id" placeholder="moj-link" 
+                    <input type="text" name="custom_id" value="{{ custom_id if custom_id else '' }}" placeholder="moj-link"
                         class="w-full p-3 outline-none rounded-r text-sm">
                 </div>
-                <p class="text-[10px] text-gray-400 mt-1">Dopuštena slova, brojke i crtice.</p>
+                <p class="text-[10px] text-gray-400 mt-1">Dopustena slova, brojke, crtice i donje crtice.</p>
+            </div>
+
+            <div>
+                <label for="qr_template" class="block text-sm font-medium text-slate-700 mb-2">QR template</label>
+                <select id="qr_template" name="qr_template" class="w-full p-3 border rounded bg-white">
+                    {% for template_key, template in qr_templates.items() %}
+                    <option value="{{ template_key }}" {% if selected_template == template_key %}selected{% endif %}>
+                        {{ template.name }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
 
             <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700 transition">
                 Skrati
             </button>
         </form>
-{% if short_url %}
+
+        {% if short_url %}
         <div class="mt-6 p-4 bg-green-100 rounded border border-green-200">
-            <p class="text-sm text-green-800 text-center mb-2">Tvoj skraćeni link:</p>
+            <p class="text-sm text-green-800 text-center mb-2">Tvoj skraceni link:</p>
             <div class="flex items-center gap-2">
                 <input type="text" readonly value="{{ short_url }}" id="shortUrlInput"
                        class="w-full bg-white p-2 text-sm border rounded text-blue-600 font-bold outline-none">
-                
                 <button onclick="copyToClipboard()" id="copyBtn"
                         class="bg-blue-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-blue-700 transition shrink-0">
                     Kopiraj
                 </button>
             </div>
+
+            {% if qr_code_path %}
+            <div class="mt-4 flex flex-col items-center gap-3">
+                <img src="{{ qr_code_path }}" alt="QR kod za {{ short_url }}" class="w-56 h-56 bg-white p-2 shadow-sm">
+                <a href="{{ qr_code_path }}" download class="text-sm font-medium text-blue-600 hover:underline">Preuzmi QR kod</a>
+            </div>
+            {% endif %}
         </div>
 
         <script>
