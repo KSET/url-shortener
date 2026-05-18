@@ -5,37 +5,70 @@
     <title>Admin Dashboard</title>
 </head>
 <body class="bg-gray-50 p-10">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <div class="flex justify-between mb-8">
-            <h1 class="text-2xl font-bold">Admin Panel</h1>
-            <p>Prijavljen: {{ user.email }}</p>
+            <div>
+                <h1 class="text-2xl font-bold">Admin Panel</h1>
+                <p class="text-sm text-gray-500">Prijavljen: {{ user.email }}</p>
+            </div>
+            <a href="/dashboard" class="text-blue-600 hover:underline">Novi link</a>
         </div>
-        <table class="w-full bg-white rounded shadow">
+        <table class="w-full bg-white rounded shadow overflow-hidden">
             <thead class="bg-gray-200">
                 <tr>
                     <th class="p-4 text-left">Originalni URL</th>
                     <th class="p-4 text-left">Kod</th>
+                    <th class="p-4 text-left">Template</th>
+                    <th class="p-4 text-center">Klikovi</th>
+                    <th class="p-4 text-left">Zadnji klik</th>
+                    <th class="p-4 text-center">QR</th>
                     <th class="p-4 text-center">Akcije</th>
                 </tr>
             </thead>
             <tbody>
                 {% for link in links %}
                 <tr class="border-b hover:bg-gray-50">
-                    <td class="p-4">
+                    <td class="p-4 max-w-xl">
                         <form action="/edit/{{ link.id }}" method="POST" class="flex gap-2">
-                            <input type="url" name="new_url" value="{{ link.original_url }}" 
+                            <input type="url" name="new_url" value="{{ link.original_url }}"
                                 class="border rounded px-2 py-1 w-full text-sm focus:outline-blue-500">
                             <button type="submit" class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600">
                                 Spremi
                             </button>
                         </form>
                     </td>
-                    <td class="p-4 font-mono text-sm text-gray-600">{{ link.short_id }}</td>
+                    <td class="p-4 font-mono text-sm text-gray-600">
+                        <a href="{{ base_url }}/{{ link.short_id }}" class="text-blue-600 hover:underline">{{ link.short_id }}</a>
+                    </td>
+                    <td class="p-4 text-sm text-gray-700">
+                        {{ qr_templates.get(link.qr_template, qr_templates.general).name }}
+                    </td>
+                    <td class="p-4 text-center font-semibold">{{ link.click_count or 0 }}</td>
+                    <td class="p-4 text-sm text-gray-600">
+                        {% if link.last_clicked_at %}
+                            {{ link.last_clicked_at.strftime("%Y-%m-%d %H:%M") }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td class="p-4 text-center">
-                        <form action="/delete/{{ link.id }}" method="POST" onsubmit="return confirm('Sigurno želiš obrisati?')">
-                            <button class="text-red-600 hover:underline text-sm font-medium">Obriši</button>
+                        {% if link.qr_code_path %}
+                        <a href="{{ link.qr_code_path }}" download class="inline-flex justify-center">
+                            <img src="{{ link.qr_code_path }}" alt="QR kod za {{ link.short_id }}" class="w-16 h-16 rounded border bg-white p-1">
+                        </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-center">
+                        <form action="/delete/{{ link.id }}" method="POST" onsubmit="return confirm('Sigurno zelis obrisati?')">
+                            <button class="text-red-600 hover:underline text-sm font-medium">Obrisi</button>
                         </form>
                     </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-gray-500">Jos nema skracenih linkova.</td>
                 </tr>
                 {% endfor %}
             </tbody>

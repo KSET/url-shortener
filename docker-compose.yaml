@@ -1,36 +1,44 @@
-version: '3.8'
-
 services:
   db:
-      image: postgres:15
-      restart: always
-      environment:
-        POSTGRES_USER: ${DB_USER}
-        POSTGRES_PASSWORD: ${DB_PASSWORD}
-        POSTGRES_DB: ${DB_NAME}
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
-      networks:
-        - internal
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
 
   web:
     build: .
     restart: unless-stopped
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - qr_codes:/code/static/qr
     labels:
       - "traefik.enable=true"
       - "DomainName=skrati.kset.org"
       - "traefik.http.services.skrati-web.loadbalancer.server.port=8000"
     networks:
       - internal
-      - traefik_network
 
 networks:
   internal:
-  traefik_network:
-    external: true
 
 volumes:
   postgres_data:
+  qr_codes:

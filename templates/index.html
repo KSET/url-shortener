@@ -4,11 +4,50 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <title>Skrati.me - Dashboard</title>
 </head>
+<<<<<<< Updated upstream
 <body class="bg-slate-100 flex items-center justify-center h-screen">
     <div class="bg-white p-10 rounded-xl shadow-lg w-full max-w-md">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-blue-600">Skrati URL</h1>
             <a href="/logout" class="text-xs text-red-500 hover:underline">Odjava ({{ user.email }})</a>
+=======
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-6">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg">
+        <div class="flex items-start justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-600">Skrati URL</h1>
+                <p class="text-sm text-slate-500 mt-1">{{ user.email }}</p>
+            </div>
+            <div class="flex gap-3 text-sm">
+                <a href="/admin" class="text-blue-600 hover:underline">Admin</a>
+                <a href="/logout" class="text-slate-500 hover:text-slate-800">Odjava</a>
+            </div>
+        </div>
+        <form action="/shorten" method="POST" class="space-y-4">
+            <input type="url" name="url" placeholder="Zalijepi link ovdje..." required class="w-full p-3 border rounded">
+            <div>
+                <label for="qr_template" class="block text-sm font-medium text-slate-700 mb-2">QR template</label>
+                <select id="qr_template" name="qr_template" class="w-full p-3 border rounded bg-white">
+                    {% for template_key, template in qr_templates.items() %}
+                    <option value="{{ template_key }}" {% if selected_template == template_key %}selected{% endif %}>
+                        {{ template.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700">Skrati</button>
+        </form>
+        {% if short_url %}
+        <div class="mt-6 p-4 bg-green-100 rounded text-center">
+            <p class="text-sm">Tvoj link:</p>
+            <a href="{{ short_url }}" class="font-bold text-blue-600 break-all">{{ short_url }}</a>
+            {% if qr_code_path %}
+            <div class="mt-4 flex flex-col items-center gap-3">
+                <img src="{{ qr_code_path }}" alt="QR kod za {{ short_url }}" class="w-56 h-56 rounded bg-white p-2 shadow-sm">
+                <a href="{{ qr_code_path }}" download class="text-sm font-medium text-blue-600 hover:underline">Preuzmi QR kod</a>
+            </div>
+            {% endif %}
+>>>>>>> Stashed changes
         </div>
 
         {% if error %}
